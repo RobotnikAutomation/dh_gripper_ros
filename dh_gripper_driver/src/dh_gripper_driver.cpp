@@ -14,6 +14,7 @@ std::string _gripper_ID;
 std::string _gripper_model;
 std::string _gripper_connect_port;
 std::string _gripper_Baudrate;
+std::string _gripper_tf_prefix;
 DH_Gripper *_gripper;
 
 void update_gripper_control(const dh_gripper_msgs::GripperCtrl::ConstPtr& msg)
@@ -85,7 +86,7 @@ void update_gripper_joint_state(sensor_msgs::JointState& msg)
     _gripper->GetCurrentPosition(tmp_pos);
 
     msg.position[0] = (1000-tmp_pos)/1000.0 * 0.637;
-    msg.name[0] = "gripper_finger1_joint"; 
+    msg.name[0] = _gripper_tf_prefix + "finger1_joint"; 
 
     seq++;
 }
@@ -115,11 +116,13 @@ int main(int argc, char** argv)
     n.param<std::string>("Gripper_Model", _gripper_model,"AG95_MB");
     n.param<std::string>("Connect_port", _gripper_connect_port,"/dev/ttyUSB0");
     n.param<std::string>("BaudRate", _gripper_Baudrate, "115200");
+    n.param<std::string>("Tf_prefix", _gripper_tf_prefix, "");
     
     ROS_INFO("Gripper_ID : %s", _gripper_ID.c_str());
     ROS_INFO("Gripper_model : %s", _gripper_model.c_str());
     ROS_INFO("Connect_port: %s", _gripper_connect_port.c_str());
     ROS_INFO("BaudRate : %s (In TCP/IP Mode , BaudRate is unuse)", _gripper_Baudrate.c_str());
+    ROS_INFO("Tf_prefix : %s ", _gripper_tf_prefix.c_str());
 
 
     DH_Gripper_Factory* _gripper_Factory = new DH_Gripper_Factory();
