@@ -82,16 +82,23 @@ void update_gripper_joint_state(sensor_msgs::JointState& msg)
     msg.header.stamp = ros::Time::now();
     msg.header.seq = seq;
 
-    msg.name.resize(1);
-    msg.position.resize(1);
+    msg.name.resize(2);
+    msg.position.resize(2);
 
 
     int tmp_pos = 0;
-
     _gripper->GetCurrentPosition(tmp_pos);
 
-    msg.position[0] = (1000-tmp_pos)/1000.0 * 0.637;
+    msg.position[0] = (100-tmp_pos)/100.0 * 1.16;
     msg.name[0] = _gripper_tf_prefix + "finger1_joint";
+
+    int tmp_rot = 0;
+    int tmp_state[9] = {0};
+    _gripper->GetRunStates(tmp_state);
+    tmp_rot = tmp_state[6];
+
+    msg.position[1] = (tmp_rot*0.0174533) - 1;
+    msg.name[1] = _gripper_tf_prefix + "finger1_base_joint";
 
     seq++;
 }
