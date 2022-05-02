@@ -19,10 +19,10 @@ DH_Gripper *_gripper;
 
 void update_gripper_control(const dh_gripper_msgs::GripperCtrl::ConstPtr& msg)
 {
-    
+
     if(msg->initialize)
     {
-      _gripper->Initialization();  
+      _gripper->Initialization();
     }
     else
     {
@@ -38,14 +38,19 @@ void update_rotation_control(const dh_gripper_msgs::GripperRotCtrl::ConstPtr& ms
     ROS_INFO("r_speed:[%f],r_force: [%f], r_angle: [%f]", msg->speed,msg->force, msg->angle);
     if(_gripper_model.find("RGI")!= _gripper_model.npos)
     {
-        dynamic_cast<DH_RGI *>(_gripper)->SetTargetRotationTorque((int)msg->force); 
-        dynamic_cast<DH_RGI *>(_gripper)->SetTargetRotationSpeed((int)msg->speed); 
-        dynamic_cast<DH_RGI *>(_gripper)->SetTargetRotation((int)msg->angle); 
+        dynamic_cast<DH_RGI *>(_gripper)->SetTargetRotationTorque((int)msg->force);
+        dynamic_cast<DH_RGI *>(_gripper)->SetTargetRotationSpeed((int)msg->speed);
+        dynamic_cast<DH_RGI *>(_gripper)->SetTargetRotation((int)msg->angle);
 
     }
     else if(_gripper_model.find("DH3_CAN")!= _gripper_model.npos)
     {
-        dynamic_cast<DH_DH3_CAN *>(_gripper)->SetTargetRotation((int)msg->angle); 
+        dynamic_cast<DH_DH3_CAN *>(_gripper)->SetTargetRotation((int)msg->angle);
+    }
+// New else if for acces to rotation control, there is no DH3_Can model define in the launch of the driver
+    else if(_gripper_model.find("DH3")!= _gripper_model.npos)
+    {
+        dynamic_cast<DH_DH3_CAN *>(_gripper)->SetTargetRotation((int)msg->angle);
     }
 
 }
@@ -55,14 +60,14 @@ void update_gripper_state(dh_gripper_msgs::GripperState& msg)
 {
     static long seq = 0;
     msg.header.stamp = ros::Time::now();
-    msg.header.seq =seq; 
+    msg.header.seq =seq;
     int tmp_state[5] = {0};
     _gripper->GetRunStates(tmp_state);
     if(tmp_state[0] == 1)
         msg.is_initialized = true;
     else
         msg.is_initialized = false;
-        
+
     msg.grip_state      = tmp_state[1];
     msg.position        = tmp_state[2];
     msg.target_position = tmp_state[3];
@@ -76,7 +81,7 @@ void update_gripper_joint_state(sensor_msgs::JointState& msg)
     msg.header.frame_id = "";
     msg.header.stamp = ros::Time::now();
     msg.header.seq = seq;
-    
+
     msg.name.resize(1);
     msg.position.resize(1);
 
@@ -86,7 +91,7 @@ void update_gripper_joint_state(sensor_msgs::JointState& msg)
     _gripper->GetCurrentPosition(tmp_pos);
 
     msg.position[0] = (1000-tmp_pos)/1000.0 * 0.637;
-    msg.name[0] = _gripper_tf_prefix + "finger1_joint"; 
+    msg.name[0] = _gripper_tf_prefix + "finger1_joint";
 
     seq++;
 }
@@ -97,9 +102,9 @@ void update_rotation_state(dh_gripper_msgs::GripperRotState& msg)
 {
     static long seq = 0;
     msg.header.stamp = ros::Time::now();
-    msg.header.seq =seq; 
+    msg.header.seq =seq;
     int tmp_state[9] = {0};
-    _gripper->GetRunStates(tmp_state); 
+    _gripper->GetRunStates(tmp_state);
     msg.rot_state       = tmp_state[5];
     msg.angle           = tmp_state[6];
     msg.target_angle    = tmp_state[7];
@@ -117,7 +122,7 @@ int main(int argc, char** argv)
     n.param<std::string>("Connect_port", _gripper_connect_port,"/dev/ttyUSB0");
     n.param<std::string>("BaudRate", _gripper_Baudrate, "115200");
     n.param<std::string>("Tf_prefix", _gripper_tf_prefix, "");
-    
+
     ROS_INFO("Gripper_ID : %s", _gripper_ID.c_str());
     ROS_INFO("Gripper_model : %s", _gripper_model.c_str());
     ROS_INFO("Connect_port: %s", _gripper_connect_port.c_str());
@@ -127,16 +132,16 @@ int main(int argc, char** argv)
 
     DH_Gripper_Factory* _gripper_Factory = new DH_Gripper_Factory();
     _gripper_Factory->Set_Parameter(atoi(_gripper_ID.c_str()), _gripper_connect_port, atoi(_gripper_Baudrate.c_str()));
-    
+
 
     _gripper = _gripper_Factory->CreateGripper(_gripper_model);
     if(_gripper == NULL)
     {
         ROS_ERROR("No this Model :%s", _gripper_model.c_str());
         return -1;
-    }   
+    }
 
-     
+
     if(_gripper->open()<0)
     {
         ROS_ERROR("Unable to open commport to %s", _gripper_connect_port.c_str());
@@ -155,7 +160,7 @@ int main(int argc, char** argv)
         initstate = 0;
         std::cout<< " wait grip initialized " << std::endl;
         while(initstate != DH_Gripper::S_INIT_FINISHED )
-            _gripper->GetInitState(initstate); 
+            _gripper->GetInitState(initstate);
         std::cout<< "GetInitState "<< initstate << std::endl;
     }
 
@@ -173,7 +178,7 @@ int main(int argc, char** argv)
         _rot_state_pub = n.advertise<dh_gripper_msgs::GripperRotState>("/gripper/rot_states", 50);
     }
     //TODO
-    ros::Publisher _gripper_joint_state_pub = n.advertise<sensor_msgs::JointState>("/gripper/joint_states", 50); 
+    ros::Publisher _gripper_joint_state_pub = n.advertise<sensor_msgs::JointState>("/gripper/joint_states", 50);
 
     ros::Rate loop_rate(50);
      while (ros::ok())
@@ -194,9 +199,9 @@ int main(int argc, char** argv)
             _rot_state_pub.publish(msg_r_state);
 
         }
-  
+
         ros::spinOnce();
-  
+
         loop_rate.sleep();
     }
 
